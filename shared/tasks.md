@@ -33,7 +33,7 @@ Correctness first. Optimization later.
 - [x] Verify iPhone 11 builds and launches
 - [x] Confirm Bundle Identifier
 - [x] Confirm Signing Team set correctly
-- [ ] Commit clean baseline
+- [x] Commit clean baseline
 
 ## Debugger
 - [ ] Confirm no signing errors
