@@ -36,9 +36,9 @@ Correctness first. Optimization later.
 - [x] Commit clean baseline
 
 ## Debugger
-- [ ] Confirm no signing errors
-- [ ] Confirm app launches on Simulator
-- [ ] Confirm app launches on device
+- [x] Confirm no signing errors
+- [x] Confirm app launches on Simulator
+- [x] Confirm app launches on device
 
 Deliverable:
 App runs on iPhone 11 with default UI.
@@ -48,22 +48,22 @@ App runs on iPhone 11 with default UI.
 # Day 2 — CoreML Model Load
 
 ## ML_Vision
-- [ ] Provide YOLO CoreML model (.mlmodel)
-- [ ] Provide input name
-- [ ] Provide output tensor names
-- [ ] Provide expected output shape
-- [ ] Confirm minimum iOS requirement
+- [x] Provide YOLO CoreML model (.mlmodel)
+- [x] Provide input name
+- [x] Provide output tensor names
+- [x] Provide expected output shape
+- [x] Confirm minimum iOS requirement
 
 ## Builder
-- [ ] Import .mlmodel into Xcode
-- [ ] Confirm model class auto-generated
-- [ ] Write minimal load test
-- [ ] Print "Model loaded successfully"
+- [x] Import .mlmodel into Xcode
+- [x] Confirm model class auto-generated
+- [x] Write minimal load test
+- [x] Print "Model loaded successfully"
 
 ## Debugger
-- [ ] Confirm model loads on device
-- [ ] Confirm no runtime crash
-- [ ] Confirm console log visible
+- [x] Confirm model loads on device
+- [x] Confirm no runtime crash
+- [x] Confirm console log visible
 
 Deliverable:
 YOLO model loads successfully on iPhone 11.
@@ -73,15 +73,15 @@ YOLO model loads successfully on iPhone 11.
 # Day 3 — Single Image Inference
 
 ## Builder
-- [ ] Create dummy 640x640 image input
-- [ ] Run single inference
-- [ ] Print output tensor shapes
-- [ ] Measure inference time
+- [x] Create dummy 640x640 image input
+- [x] Run single inference
+- [x] Print output tensor shapes
+- [x] Measure inference time
 
 ## Debugger
-- [ ] Confirm output shape matches spec
-- [ ] Confirm inference time logged
-- [ ] Confirm no memory spike
+- [x] Confirm output shape matches spec
+- [x] Confirm inference time logged
+- [x] Confirm no memory spike
 
 Deliverable:
 Single-frame inference works on device.
@@ -91,16 +91,16 @@ Single-frame inference works on device.
 # Day 4 — Camera Pipeline
 
 ## Builder
-- [ ] Add AVFoundation preview
-- [ ] Capture frame buffer
-- [ ] Convert to 640x640 (letterbox)
-- [ ] Feed frame into model
-- [ ] Log per-frame inference time
+- [x] Add AVFoundation preview
+- [x] Capture frame buffer
+- [x] Convert to 640x640 (letterbox)
+- [x] Feed frame into model
+- [x] Log per-frame inference time
 
 ## Debugger
-- [ ] Confirm preview stable
-- [ ] Confirm no main-thread blocking
-- [ ] Confirm stable inference loop
+- [x] Confirm preview stable
+- [x] Confirm no main-thread blocking
+- [x] Confirm stable inference loop
 
 Deliverable:
 Live camera → YOLO inference running.
@@ -110,10 +110,10 @@ Live camera → YOLO inference running.
 # Day 5 — Decode + NMS
 
 ## ML_Vision
-- [ ] Provide reference decode logic
-- [ ] Clarify bbox format (xywh or xyxy)
-- [ ] Clarify confidence + class structure
-- [ ] Provide recommended thresholds
+- [x] Provide reference decode logic
+- [x] Clarify bbox format (xywh or xyxy)
+- [x] Clarify confidence + class structure
+- [x] Provide recommended thresholds
 
 ## Builder
 - [ ] Implement decode

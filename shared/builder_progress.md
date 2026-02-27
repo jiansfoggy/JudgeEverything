@@ -2,14 +2,49 @@
 
 ## Day 1 — Clean iOS Foundation
 
-**Status:** Ready to commit baseline.
+**Status:** Complete.
 
 ### Completed
-- Xcode project located at `/Users/jiansun/Documents/PostDoc/CODE-SHOW/JudgeE2/JudgeE2`.
+- Xcode project located at `/Users/jiansun/Documents/PostDoc/CODE-SHOW/APP/JudgeE2/JudgeE2`.
 - iOS deployment target **17.0** in `JudgeE2.xcodeproj`.
 - Bundle Identifier: `js.JudgeE2`.
 - Signing Team: `W95LVGJ7G3` (Automatic).
 - Simulator + iPhone 11 both launch the default app (white screen).
 
-### Remaining / Needs user action
-- None (baseline already committed by user; discarded local `.DS_Store` change).
+## Day 2 — CoreML Model Load (Builder)
+
+**Status:** Complete.
+
+### Completed
+- Added `yolov9-c.mlmodel` to app target (copied to `JudgeE2/JudgeE2/Models/`).
+- Confirmed auto-generated model class: `yolov9_c` (via CoreML generate).
+- Added minimal load test (`ModelLoader.testLoad()`), called in `JudgeE2App.init()`.
+- Prints **"Model loaded successfully"** on app start.
+
+## Day 3 — Single Image Inference (Builder)
+
+**Status:** Complete.
+
+### Completed
+- Created dummy 640×640 BGRA pixel buffer input.
+- Ran a single inference via `yolov9_c.prediction(image:)`.
+- Printed output tensor shapes for `var_3019` and `var_3022`.
+- Measured and logged single inference time (ms).
+
+## Day 4 — Camera Pipeline (Builder)
+
+**Status:** Complete.
+
+### Completed
+- Added AVFoundation camera preview (`CameraPreview` + `PreviewView`).
+- Captured frame buffers via `AVCaptureVideoDataOutput` delegate.
+- Implemented 640×640 letterbox conversion with CoreImage.
+- Fed frames into `yolov9_c.prediction(image:)`.
+- Logged per-frame inference time (ms).
+
+### Verification (2026-02-27)
+- Confirmed `CameraManager.swift` handles session config, frame capture, letterbox, and per-frame inference logging.
+- Confirmed `ContentView` uses `CameraPreview` with start/stop lifecycle.
+
+### Notes
+- Added camera usage description in build settings: `INFOPLIST_KEY_NSCameraUsageDescription`.
