@@ -159,9 +159,9 @@ Real-time bounding box overlay on iPhone 11.
 - [ ] Record memory usage
 
 ## Architect
-- [ ] Review pipeline structure
-- [ ] Freeze Phase 1 architecture
-- [ ] Define Phase 2 (Segmentation integration plan)
+- [x] Review pipeline structure
+- [x] Freeze Phase 1 architecture
+- [x] Define Phase 2 (Segmentation integration plan)
 
 Deliverable:
 Stable YOLO detection pipeline.

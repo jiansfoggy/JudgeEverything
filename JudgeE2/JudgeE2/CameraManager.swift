@@ -4,6 +4,7 @@ import CoreImage
 import CoreML
 import Foundation
 import SwiftUI
+import MachO
 
 final class CameraManager: NSObject, ObservableObject {
     let session = AVCaptureSession()
@@ -18,6 +19,12 @@ final class CameraManager: NSObject, ObservableObject {
     private var videoConnection: AVCaptureConnection?
     private var videoOutput: AVCaptureVideoDataOutput?
     private var lastRotationAngle: CGFloat = 0
+
+    private var frameCount = 0
+    private var lastFpsTime = CFAbsoluteTimeGetCurrent()
+
+    private var inferenceTimesMs: [Double] = []
+    private let inferenceStatsWindow = 100
 
     private struct Detection {
         let x1: Float
@@ -191,6 +198,17 @@ final class CameraManager: NSObject, ObservableObject {
 
 extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        // FPS + memory logging (1s window)
+        frameCount += 1
+        let now = CFAbsoluteTimeGetCurrent()
+        if now - lastFpsTime >= 1.0 {
+            let fps = Double(frameCount) / (now - lastFpsTime)
+            let mem = reportMemoryMB()
+            print(String(format: "FPS: %.2f | Memory: %.1f MB", fps, mem))
+            frameCount = 0
+            lastFpsTime = now
+        }
+
         guard let model = model else { return }
         if isProcessing { return }
         isProcessing = true
@@ -204,6 +222,16 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
             let output = try model.prediction(image: inputBuffer)
             let end = CFAbsoluteTimeGetCurrent()
             let elapsedMs = (end - start) * 1000.0
+
+            inferenceTimesMs.append(elapsedMs)
+            if inferenceTimesMs.count >= inferenceStatsWindow {
+                let mean = inferenceTimesMs.reduce(0.0, +) / Double(inferenceTimesMs.count)
+                let sorted = inferenceTimesMs.sorted()
+                let p95Index = max(0, Int(ceil(0.95 * Double(sorted.count))) - 1)
+                let p95 = sorted[p95Index]
+                print(String(format: "Inference time stats (n=%d): mean=%.2f ms | p95=%.2f ms", sorted.count, mean, p95))
+                inferenceTimesMs.removeAll(keepingCapacity: true)
+            }
 
             let detections = decodeDetections(from: output.var_3019, confidenceThreshold: 0.25)
             let topK = 10
@@ -408,6 +436,20 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
 
     private func sigmoid(_ x: Float) -> Float {
         return 1.0 / (1.0 + exp(-x))
+    }
+
+    private func reportMemoryMB() -> Double {
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
+        let kerr: kern_return_t = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+            }
+        }
+        if kerr == KERN_SUCCESS {
+            return Double(info.resident_size) / 1024.0 / 1024.0
+        }
+        return -1
     }
 
     private func letterboxToSquare(pixelBuffer: CVPixelBuffer, size: Int) -> CVPixelBuffer? {

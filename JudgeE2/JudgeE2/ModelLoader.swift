@@ -5,8 +5,11 @@ import CoreVideo
 enum ModelLoader {
     static func testLoad() {
         do {
+            let start = CFAbsoluteTimeGetCurrent()
             _ = try yolov9_c(configuration: MLModelConfiguration())
-            print("Model loaded successfully")
+            let end = CFAbsoluteTimeGetCurrent()
+            let elapsedMs = (end - start) * 1000.0
+            print(String(format: "Model loaded in %.2f ms", elapsedMs))
         } catch {
             print("Model load failed: \(error)")
         }

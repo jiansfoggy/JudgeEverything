@@ -95,10 +95,52 @@
 ## 3) 性能瓶颈（Performance Bottlenecks）
 - 主要瓶颈仍是模型推理 + decode；overlay 绘制开销低。
 
+> 未在 tasks.md 勾选任何项（按要求）。
+
 ---
 
-## 建议的验证动作（Day 6 Debugger）
-1) 旋转设备至 Landscape Left/Right 与 Portrait Upside Down，确认框是否仍对齐且无镜像。
-2) 切换前置摄像头，确认 bbox 可见且方向正确。
+# Debug Report — Day 7 (Debugger)
+
+日期：2026-02-28
+
+## 结论摘要
+- ✅ 推理时间已记录（多数 170–190 ms，偶发高峰 ~508 ms）
+- ✅ FPS 已记录（约 0.5–3.3 FPS，稳定区间 ~3.1 FPS）
+- ✅ 内存已记录（约 75–180 MB，稳定在 ~177 MB）
+- ✅ 模型加载时间已记录（Model loaded in 9842.05 ms）
+- ✅ 推理时间统计（mean + p95）已记录：
+  - mean=177.26 ms | p95=182.75 ms
+  - mean=182.09 ms | p95=190.96 ms
+
+---
+
+## 1) 编译/构建问题（Compile/Build Issues）
+- 未发现新的编译/构建错误。
+
+## 2) 运行时错误（Runtime Errors）
+- 日志无崩溃；仅见 XPC 相关系统提示（不影响运行）。
+
+## 3) 性能瓶颈（Performance Bottlenecks）
+- 推理时间分布（样本）：
+  - 常态区间：约 170–190 ms
+  - 偶发峰值：约 508 ms
+- FPS（样本）：
+  - 0.52, 2.83, 3.17, 3.22, 3.20, 3.23, 3.18, 3.22, 3.14, 3.09, 3.11, 3.12, 3.14
+  - 稳定区间 ~3.1 FPS
+- 内存（样本）：
+  - 75.0 MB（初始）
+  - ~177.3 MB（稳定值）
+
+---
+
+## Evidence
+- 运行日志（2026-02-28）：
+  - `FPS: 0.52–3.26`
+  - `Memory: 75.0–177.3 MB`
+  - `Frame inference time: 170–190 ms (主流)`
+  - `Frame inference time: 508.56 ms (峰值)`
+- `Model loaded in 9842.05 ms`
+- `Inference time stats (n=100): mean=177.26 ms | p95=182.75 ms`
+- `Inference time stats (n=100): mean=182.09 ms | p95=190.96 ms`
 
 > 未在 tasks.md 勾选任何项（按要求）。
