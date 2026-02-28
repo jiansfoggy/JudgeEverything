@@ -6,9 +6,9 @@ import Foundation
 import SwiftUI
 
 final class CameraManager: NSObject, ObservableObject {
+//    var objectWillChange: ObservableObjectPublisher
+    
     let session = AVCaptureSession()
-    @Published var boxes: [CGRect] = []
-
     private let sessionQueue = DispatchQueue(label: "camera.session.queue")
     private let videoQueue = DispatchQueue(label: "camera.video.queue")
     private let ciContext = CIContext()
@@ -23,16 +23,6 @@ final class CameraManager: NSObject, ObservableObject {
         let score: Float
         let classId: Int
     }
-
-    private struct LetterboxInfo {
-        let origW: Float
-        let origH: Float
-        let scale: Float
-        let padX: Float
-        let padY: Float
-        let inputSize: Float
-    }
-    private var lastLetterbox: LetterboxInfo?
 
     override init() {
         super.init()
@@ -84,9 +74,19 @@ final class CameraManager: NSObject, ObservableObject {
         }
         session.addOutput(output)
 
+//        if let connection = output.connection(with: .video), connection.isVideoOrientationSupported {
+//            connection.videoOrientation = .portrait
+//        }
         if let connection = output.connection(with: .video) {
-            if connection.isVideoRotationAngleSupported(0) {
-                connection.videoRotationAngle = 0
+
+            if #available(iOS 17.0, *) {
+                if connection.isVideoRotationAngleSupported(90) {
+                    connection.videoRotationAngle = 90
+                }
+            } else {
+                if connection.isVideoOrientationSupported {
+                    connection.videoOrientation = .portrait
+                }
             }
         }
 
@@ -116,49 +116,14 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
             let end = CFAbsoluteTimeGetCurrent()
             let elapsedMs = (end - start) * 1000.0
 
-            let detections = decodeDetections(from: output.var_3019, confidenceThreshold: 0.25)
-            let topK = 10
-            let topDetections = detections.sorted { $0.score > $1.score }.prefix(topK)
-            let nmsDetections = classAwareNMS(Array(topDetections), iouThreshold: 0.45)
+            let detections = decodeDetections(from: output.var_3019,
+                                              confidenceThreshold: 0.25)
+            let nmsDetections = classAwareNMS(detections, iouThreshold: 0.45)
 
-            let top5 = Array(nmsDetections.prefix(5))
-            print(String(format: "Frame inference time: %.2f ms | raw_in_boxes: %d | topK: %d | final_detections: %d", elapsedMs, detections.count, min(topK, detections.count), nmsDetections.count))
-            for (idx, det) in top5.enumerated() {
-                print(String(format: "det[%d]: class=%d score=%.3f box=[%.1f, %.1f, %.1f, %.1f]", idx, det.classId, det.score, det.x1, det.y1, det.x2, det.y2))
-            }
-
-            let rects = top5.compactMap { det in
-                self.mapToMetadataRect(det)
-            }
-            DispatchQueue.main.async { [weak self] in
-                self?.boxes = rects
-            }
+            print(String(format: "Frame inference time: %.2f ms | detections: %d", elapsedMs, nmsDetections.count))
         } catch {
             print("Frame inference failed: \(error)")
         }
-    }
-
-    private func mapToMetadataRect(_ det: Detection) -> CGRect? {
-        guard let info = lastLetterbox else { return nil }
-
-        // Convert from 640x640 model input back to original buffer coords
-        let x1 = (det.x1 - info.padX) / info.scale
-        let y1 = (det.y1 - info.padY) / info.scale
-        let x2 = (det.x2 - info.padX) / info.scale
-        let y2 = (det.y2 - info.padY) / info.scale
-
-        let bx = max(0, min(info.origW, x1))
-        let by = max(0, min(info.origH, y1))
-        let bw = max(0, min(info.origW, x2)) - bx
-        let bh = max(0, min(info.origH, y2)) - by
-        if bw <= 1 || bh <= 1 { return nil }
-
-        // Normalize for metadata rect
-        let normX = bx / info.origW
-        let normY = by / info.origH
-        let normW = bw / info.origW
-        let normH = bh / info.origH
-        return CGRect(x: CGFloat(normX), y: CGFloat(normY), width: CGFloat(normW), height: CGFloat(normH))
     }
 
     private func decodeDetections(from multiArray: MLMultiArray, confidenceThreshold: Float) -> [Detection] {
@@ -171,7 +136,9 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         let strideC = strides[1]
         let strideI = strides[2]
 
-        let pointer = multiArray.dataPointer.bindMemory(to: Float.self, capacity: multiArray.count)
+        guard let pointer = multiArray.dataPointer.bindMemory(to: Float.self, capacity: multiArray.count) as UnsafeMutablePointer<Float>? else {
+            return []
+        }
 
         func value(_ c: Int, _ i: Int) -> Float {
             let index = c * strideC + i * strideI
@@ -271,15 +238,6 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         let x = (CGFloat(size) - scaledImage.extent.width) / 2.0
         let y = (CGFloat(size) - scaledImage.extent.height) / 2.0
         let translatedImage = scaledImage.transformed(by: CGAffineTransform(translationX: x, y: y))
-
-        lastLetterbox = LetterboxInfo(
-            origW: Float(width),
-            origH: Float(height),
-            scale: Float(scale),
-            padX: Float(x),
-            padY: Float(y),
-            inputSize: Float(size)
-        )
 
         let outputAttrs: [CFString: Any] = [
             kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA,

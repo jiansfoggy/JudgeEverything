@@ -116,15 +116,15 @@ Live camera → YOLO inference running.
 - [x] Provide recommended thresholds
 
 ## Builder
-- [ ] Implement decode
-- [ ] Implement confidence filtering
-- [ ] Implement NMS
-- [ ] Print detection count per frame
+- [x] Implement decode
+- [x] Implement confidence filtering
+- [x] Implement NMS
+- [x] Print detection count per frame
 
 ## Debugger
-- [ ] Confirm boxes appear reasonable
-- [ ] Confirm no explosion in detection count
-- [ ] Measure decode time
+- [x] Confirm boxes appear reasonable
+- [x] Confirm no explosion in detection count
+- [x] Measure decode time
 
 Deliverable:
 Valid bounding boxes computed from model output.

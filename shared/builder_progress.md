@@ -48,3 +48,22 @@
 
 ### Notes
 - Added camera usage description in build settings: `INFOPLIST_KEY_NSCameraUsageDescription`.
+
+---
+
+## Day 5 — Decode + NMS (Builder)
+
+**Status:** Complete.
+
+### Completed
+- Implemented decode for YOLOv9-c output tensor `(1, 84, 8400)`.
+- Added confidence filtering (sigmoid + threshold 0.25).
+- Added class-aware NMS (IoU 0.45).
+- Prints detection count per frame in the inference log.
+
+### Code Notes
+- Implemented in `CameraManager.swift`:
+  - `decodeDetections(from:confidenceThreshold:)`
+  - `classAwareNMS(_:iouThreshold:)`
+  - `iou(_:_:), sigmoid(_:)`
+- Uses `var_3019` output for decode.

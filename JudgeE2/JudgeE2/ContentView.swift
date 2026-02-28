@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  JudgeE2
-//
-//  Created by Jian Sun on 2/26/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
@@ -12,7 +5,7 @@ struct ContentView: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            CameraPreview(session: cameraManager.session)
+            CameraPreview(session: cameraManager.session, boxes: cameraManager.boxes)
                 .ignoresSafeArea()
 
             Text("JudgeE2 — Camera Pipeline")
