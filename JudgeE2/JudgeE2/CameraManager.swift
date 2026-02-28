@@ -14,6 +14,10 @@ final class CameraManager: NSObject, ObservableObject {
     private let ciContext = CIContext()
     private var model: yolov9_c?
     private var isProcessing = false
+    private var currentPosition: AVCaptureDevice.Position = .back
+    private var videoConnection: AVCaptureConnection?
+    private var videoOutput: AVCaptureVideoDataOutput?
+    private var lastRotationAngle: CGFloat = 0
 
     private struct Detection {
         let x1: Float
@@ -36,9 +40,19 @@ final class CameraManager: NSObject, ObservableObject {
 
     override init() {
         super.init()
+        UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(handleOrientationChange),
+                                               name: UIDevice.orientationDidChangeNotification,
+                                               object: nil)
         sessionQueue.async { [weak self] in
             self?.configureSession()
         }
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        UIDevice.current.endGeneratingDeviceOrientationNotifications()
     }
 
     func start() {
@@ -59,11 +73,87 @@ final class CameraManager: NSObject, ObservableObject {
         }
     }
 
+    @objc private func handleOrientationChange() {
+        sessionQueue.async { [weak self] in
+            self?.updateRotation()
+        }
+    }
+
+    private func desiredRotationAngle() -> CGFloat {
+        // Keep captured buffer horizontal (landscape) regardless of device orientation
+        switch UIDevice.current.orientation {
+        case .landscapeRight:
+            return 0
+        case .landscapeLeft:
+            return 180
+        case .portraitUpsideDown:
+            return 270
+        case .portrait:
+            fallthrough
+        default:
+            return 90
+        }
+    }
+
+    private func updateRotation() {
+        guard let output = videoOutput,
+              let connection = output.connection(with: .video) else { return }
+        let angle = desiredRotationAngle()
+        if #available(iOS 17.0, *) {
+            if connection.isVideoRotationAngleSupported(angle) {
+                connection.videoRotationAngle = angle
+                lastRotationAngle = angle
+            }
+        } else {
+            if connection.isVideoOrientationSupported {
+                let orientation: AVCaptureVideoOrientation
+                switch UIDevice.current.orientation {
+                case .landscapeLeft:
+                    orientation = .landscapeLeft
+                case .landscapeRight:
+                    orientation = .landscapeRight
+                case .portraitUpsideDown:
+                    orientation = .portraitUpsideDown
+                default:
+                    orientation = .portrait
+                }
+                connection.videoOrientation = orientation
+                lastRotationAngle = orientation == .portrait ? 90 : (orientation == .portraitUpsideDown ? 270 : (orientation == .landscapeLeft ? 180 : 0))
+            }
+        }
+    }
+
+    func toggleCamera() {
+        sessionQueue.async { [weak self] in
+            guard let self = self else { return }
+            self.currentPosition = (self.currentPosition == .back) ? .front : .back
+            self.session.beginConfiguration()
+            for input in self.session.inputs {
+                self.session.removeInput(input)
+            }
+            if let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: self.currentPosition),
+               let input = try? AVCaptureDeviceInput(device: device),
+               self.session.canAddInput(input) {
+                self.session.addInput(input)
+            } else {
+                print("Camera input unavailable when toggling")
+            }
+            self.session.commitConfiguration()
+            // refresh connection + rotation/mirroring
+            self.updateRotation()
+            if let output = self.videoOutput,
+               let conn = output.connection(with: .video),
+               conn.isVideoMirroringSupported {
+                conn.isVideoMirrored = (self.currentPosition == .front)
+            }
+        }
+    }
+
     private func configureSession() {
         session.beginConfiguration()
         session.sessionPreset = .high
 
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: currentPosition),
               let input = try? AVCaptureDeviceInput(device: device),
               session.canAddInput(input) else {
             session.commitConfiguration()
@@ -83,11 +173,10 @@ final class CameraManager: NSObject, ObservableObject {
             return
         }
         session.addOutput(output)
-
-        if let connection = output.connection(with: .video) {
-            if connection.isVideoRotationAngleSupported(0) {
-                connection.videoRotationAngle = 0
-            }
+        videoOutput = output
+        updateRotation()
+        if let conn = output.connection(with: .video), conn.isVideoMirroringSupported {
+            conn.isVideoMirrored = (currentPosition == .front)
         }
 
         session.commitConfiguration()
@@ -153,12 +242,56 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         let bh = max(0, min(info.origH, y2)) - by
         if bw <= 1 || bh <= 1 { return nil }
 
-        // Normalize for metadata rect
-        let normX = bx / info.origW
-        let normY = by / info.origH
-        let normW = bw / info.origW
-        let normH = bh / info.origH
-        return CGRect(x: CGFloat(normX), y: CGFloat(normY), width: CGFloat(normW), height: CGFloat(normH))
+        var rect: CGRect
+        switch Int(lastRotationAngle) {
+        case 90:
+            // Rotate clockwise: (x, y, w, h) in W x H -> (y, W - x - w, h, w) in H x W
+            let rotX = by
+            let rotY = info.origW - bx - bw
+            let rotW = bh
+            let rotH = bw
+            let normX = rotX / info.origH
+            let normY = rotY / info.origW
+            let normW = rotW / info.origH
+            let normH = rotH / info.origW
+            rect = CGRect(x: CGFloat(normX), y: CGFloat(normY), width: CGFloat(normW), height: CGFloat(normH))
+        case 180:
+            // Rotate 180: (x, y, w, h) -> (W - x - w, H - y - h, w, h)
+            let rotX = info.origW - bx - bw
+            let rotY = info.origH - by - bh
+            let normX = rotX / info.origW
+            let normY = rotY / info.origH
+            let normW = bw / info.origW
+            let normH = bh / info.origH
+            rect = CGRect(x: CGFloat(normX), y: CGFloat(normY), width: CGFloat(normW), height: CGFloat(normH))
+        case 270:
+            // Rotate counterclockwise: (x, y, w, h) -> (H - y - h, x, h, w) in H x W
+            let rotX = info.origH - by - bh
+            let rotY = bx
+            let rotW = bh
+            let rotH = bw
+            let normX = rotX / info.origH
+            let normY = rotY / info.origW
+            let normW = rotW / info.origH
+            let normH = rotH / info.origW
+            rect = CGRect(x: CGFloat(normX), y: CGFloat(normY), width: CGFloat(normW), height: CGFloat(normH))
+        default:
+            // No rotation
+            let normX = bx / info.origW
+            let normY = by / info.origH
+            let normW = bw / info.origW
+            let normH = bh / info.origH
+            rect = CGRect(x: CGFloat(normX), y: CGFloat(normY), width: CGFloat(normW), height: CGFloat(normH))
+        }
+
+        // Mirror horizontally for front camera
+        if currentPosition == .front {
+            rect = CGRect(x: 1.0 - rect.origin.x - rect.size.width,
+                          y: rect.origin.y,
+                          width: rect.size.width,
+                          height: rect.size.height)
+        }
+        return rect
     }
 
     private func decodeDetections(from multiArray: MLMultiArray, confidenceThreshold: Float) -> [Detection] {
@@ -181,11 +314,13 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         var detections: [Detection] = []
         detections.reserveCapacity(256)
 
+        func looksNormalized(_ v: Float) -> Bool { return v >= -0.1 && v <= 1.5 }
+
         for i in 0..<locationCount {
-            let cx = value(0, i)
-            let cy = value(1, i)
-            let w = value(2, i)
-            let h = value(3, i)
+            var cx = value(0, i)
+            var cy = value(1, i)
+            var w = value(2, i)
+            var h = value(3, i)
 
             var bestScore: Float = -Float.greatestFiniteMagnitude
             var bestClass = -1
@@ -202,12 +337,26 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
 
             if bestScore < confidenceThreshold { continue }
 
+            if looksNormalized(cx) && looksNormalized(cy) && looksNormalized(w) && looksNormalized(h) {
+                cx = cx * 640.0
+                cy = cy * 640.0
+                w  = w  * 640.0
+                h  = h  * 640.0
+            }
+
             let x1 = cx - w / 2
             let y1 = cy - h / 2
             let x2 = cx + w / 2
             let y2 = cy + h / 2
 
-            detections.append(Detection(x1: x1, y1: y1, x2: x2, y2: y2, score: bestScore, classId: bestClass))
+            let clampX1 = max(0.0, min(640.0, x1))
+            let clampY1 = max(0.0, min(640.0, y1))
+            let clampX2 = max(0.0, min(640.0, x2))
+            let clampY2 = max(0.0, min(640.0, y2))
+
+            if clampX2 - clampX1 <= 1 || clampY2 - clampY1 <= 1 { continue }
+
+            detections.append(Detection(x1: clampX1, y1: clampY1, x2: clampX2, y2: clampY2, score: bestScore, classId: bestClass))
         }
 
         return detections

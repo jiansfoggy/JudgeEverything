@@ -71,3 +71,34 @@
   - `final_detections: 1–4`
 
 > 未在 tasks.md 勾选任何项（按要求）。
+
+---
+
+# Debug Report — Day 6 (Debugger)
+
+日期：2026-02-28
+
+## 结论摘要
+- ✅ 竖屏下框与物体对齐（当前版本已恢复精准）
+- ✅ 横屏/倒置稳定性已确认（旋转后 bbox 检测正常）
+- ✅ 前置摄像头 bbox 已确认（切换前后均对齐）
+
+---
+
+## 1) 编译/构建问题（Compile/Build Issues）
+- 未发现新的编译错误。
+- iOS 17 deprecation 已通过 `videoRotationAngle` 规避。
+
+## 2) 运行时错误（Runtime Errors）
+- 当前未见崩溃或 fatal error；仅有系统级 XPC/Camera 警告可忽略。
+
+## 3) 性能瓶颈（Performance Bottlenecks）
+- 主要瓶颈仍是模型推理 + decode；overlay 绘制开销低。
+
+---
+
+## 建议的验证动作（Day 6 Debugger）
+1) 旋转设备至 Landscape Left/Right 与 Portrait Upside Down，确认框是否仍对齐且无镜像。
+2) 切换前置摄像头，确认 bbox 可见且方向正确。
+
+> 未在 tasks.md 勾选任何项（按要求）。

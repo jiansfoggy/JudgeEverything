@@ -134,15 +134,16 @@ Valid bounding boxes computed from model output.
 # Day 6 — Bounding Box Overlay
 
 ## Builder
-- [ ] Map detection coordinates to preview layer
-- [ ] Handle aspectFill scaling
-- [ ] Handle device orientation
-- [ ] Draw bounding boxes in real time
+- [x] Map detection coordinates to preview layer
+- [x] Handle aspectFill scaling
+- [x] Handle device orientation
+- [x] Draw bounding boxes in real time while holding and rotating the phone.
+- [x] When the phone is rotated, the captured image must remain horizontal. For example, if the phone is rotated 90 degrees clockwise, the image must be rotated 90 degrees counterclockwise to maintain its original horizontal state.
 
 ## Debugger
-- [ ] Confirm boxes align with objects
-- [ ] Confirm no flipped or mirrored boxes
-- [ ] Confirm overlay stable across rotation
+- [x] Confirm boxes align with objects
+- [x] Confirm no flipped or mirrored boxes
+- [x] Confirm overlay stable across rotation
 
 Deliverable:
 Real-time bounding box overlay on iPhone 11.

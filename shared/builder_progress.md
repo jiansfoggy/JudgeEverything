@@ -67,3 +67,19 @@
   - `classAwareNMS(_:iouThreshold:)`
   - `iou(_:_:), sigmoid(_:)`
 - Uses `var_3019` output for decode.
+
+---
+
+## Day 6 — Bounding Box Overlay (Builder)
+
+**Status:** Complete.
+
+### Completed
+- Mapped detection coordinates to preview layer via metadata-normalized rects.
+- Handled aspectFill scaling using `layerRectConverted(fromMetadataOutputRect:)`.
+- Handled device orientation and kept captured image horizontal by adjusting `videoRotationAngle` based on device rotation.
+- Drew bounding boxes in real time with `CAShapeLayer` overlay.
+
+### Code Notes
+- `CameraManager.swift`: orientation observer + `updateRotation()` + rotation-aware `mapToMetadataRect`.
+- `CameraPreview.swift`: overlay layer path update from normalized rects.

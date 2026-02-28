@@ -8,12 +8,24 @@ struct ContentView: View {
             CameraPreview(session: cameraManager.session, boxes: cameraManager.boxes)
                 .ignoresSafeArea()
 
-            Text("JudgeE2 — Camera Pipeline")
-                .padding(8)
-                .background(.black.opacity(0.6))
-                .foregroundColor(.white)
-                .cornerRadius(8)
-                .padding()
+            HStack(spacing: 12) {
+                Text("JudgeE2 — Camera Pipeline")
+                    .padding(8)
+                    .background(.black.opacity(0.6))
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+
+                Button(action: {
+                    cameraManager.toggleCamera()
+                }) {
+                    Image(systemName: "arrow.triangle.2.circlepath.camera")
+                        .foregroundColor(.white)
+                        .padding(8)
+                        .background(.black.opacity(0.6))
+                        .cornerRadius(8)
+                }
+            }
+            .padding()
         }
         .onAppear {
             cameraManager.start()
